@@ -45,11 +45,24 @@ function getAssetPublicPath(assetName, publicPath) {
 
 function getAssetImportPath(assetName, assetsPath, context = {}) {
   if (context.preserveModules) {
-    const wrapperFile = join(context.outputDir, relative(dirname(context.inputFile), context.moduleId + ".js"))
+    const entrypointDir = dirname(context.inputFile)
+    const assetSrcRelative = relative(entrypointDir, context.moduleId)
+    const importerSrcRelative = relative(entrypointDir, context.importer)
+    const importerOutputPath = join(context.outputDir, importerSrcRelative)
     const assetFile = join(context.outputDir, getAssetImportPath(assetName, assetsPath))
-    const assetRel = relative(dirname(wrapperFile), assetFile)
+
+    let assetRel
+
+    if (!context.emitFiles) {
+      const wrapperFile = join(context.outputDir, assetSrcRelative + ".js")
+      assetRel = relative(dirname(wrapperFile), assetFile)
+    } else {
+      assetRel = relative(dirname(importerOutputPath), assetFile)
+    }
+
     return markRelative(normalizeSlashes(normalize(assetRel)))
   }
+
   return markRelative(normalizeSlashes(assetsPath ? join(assetsPath, assetName) : assetName))
 }
 
@@ -211,7 +224,9 @@ export default (initialOptions = {}) => {
               moduleId: id,
               preserveModules: options.preserveModules,
               outputDir: options.outputDir,
-              inputFile: options.inputFile
+              inputFile: options.inputFile,
+              importer: importer,
+              emitFiles: options.emitFiles
             })
             return { id: newAssetPath, external: true }
           }
